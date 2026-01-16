@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Operations Monitor | Circle Payment Factory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #0052FF;
+      --color-primary-dark: #0041CC;
+    }
+    .bg-primary { background-color: var(--color-primary); }
+    .text-primary { color: var(--color-primary); }
+    .border-primary { border-color: var(--color-primary); }
+
+    .stage-node {
+      transition: all 0.3s ease;
+    }
+    .stage-node.completed {
+      background-color: #10B981;
+      border-color: #10B981;
+      color: white;
+    }
+    .stage-node.active {
+      background-color: var(--color-primary);
+      border-color: var(--color-primary);
+      color: white;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .stage-node.pending {
+      background-color: #F3F4F6;
+      border-color: #D1D5DB;
+      color: #9CA3AF;
+    }
+
+    .stage-line {
+      transition: background-color 0.3s ease;
+    }
+    .stage-line.completed {
+      background-color: #10B981;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 82, 255, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(0, 82, 255, 0); }
+    }
+
+    .event-row {
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <script src="../../shared/mock-data.js"></script>
+  <script src="../../shared/circle-api.js"></script>
+
+  <div x-data="operationsMonitor()" x-init="init()" class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="../../index.html" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </a>
+          <div>
+            <h1 class="text-lg font-semibold text-gray-900">Payment Operations Monitor</h1>
+            <p class="text-sm text-gray-500">Track CPN payment settlement lifecycle</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-500" x-text="connectionStatus"></span>
+          <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-green-500' : 'bg-amber-500'"></span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-5xl mx-auto px-4 py-6">
+
+      <!-- Demo Controls -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <button
+              @click="startSimulation()"
+              :disabled="isRunning"
+              class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Simulate Payment
+            </button>
+            <button
+              @click="togglePause()"
+              :disabled="!isRunning"
+              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              <template x-if="isPaused">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                </svg>
+              </template>
+              <template x-if="!isPaused">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </template>
+              <span x-text="isPaused ? 'Resume' : 'Pause'"></span>
+            </button>
+            <button
+              @click="resetSimulation()"
+              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Reset
+            </button>
+          </div>
+          <div class="text-sm text-gray-500">
+            <span x-show="isRunning && !isPaused" class="flex items-center gap-2">
+              <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              Live simulation
+            </span>
+            <span x-show="isPaused" class="flex items-center gap-2">
+              <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+              Paused
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Header -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-mono text-gray-500" x-text="payment.id"></span>
+              <span
+                class="text-xs px-2 py-1 rounded-full"
+                :class="{
+                  'bg-blue-100 text-blue-700': currentStage < 4,
+                  'bg-green-100 text-green-700': currentStage === 4,
+                  'bg-red-100 text-red-700': payment.status === 'failed'
+                }"
+                x-text="getStatusLabel()"
+              ></span>
+            </div>
+            <h2 class="text-xl font-semibold text-gray-900" x-text="payment.beneficiaryName"></h2>
+            <p class="text-gray-500" x-text="payment.corridor + ' via ' + payment.bfiName"></p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm text-gray-500">Amount</p>
+            <p class="text-2xl font-bold text-gray-900" x-text="formatAmount(payment.sourceAmount, 'USD')"></p>
+            <p class="text-lg text-green-600" x-text="'= ' + formatAmount(payment.destAmount, payment.destCurrency)"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage Pipeline -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-6">Settlement Lifecycle</h3>
+
+        <div class="flex items-center justify-between">
+          <template x-for="(stage, index) in stages" :key="index">
+            <div class="flex items-center" :class="index < stages.length - 1 ? 'flex-1' : ''">
+              <!-- Stage Node -->
+              <div class="flex flex-col items-center">
+                <div
+                  class="stage-node w-12 h-12 rounded-full border-2 flex items-center justify-center mb-2"
+                  :class="{
+                    'completed': stage.status === 'completed',
+                    'active': stage.status === 'active',
+                    'pending': stage.status === 'pending'
+                  }"
+                >
+                  <template x-if="stage.status === 'completed'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </template>
+                  <template x-if="stage.status === 'active'">
+                    <svg class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                  </template>
+                  <template x-if="stage.status === 'pending'">
+                    <span class="text-lg font-medium" x-text="index + 1"></span>
+                  </template>
+                </div>
+                <span class="text-sm font-medium text-center" :class="stage.status === 'pending' ? 'text-gray-400' : 'text-gray-700'" x-text="stage.label"></span>
+                <span class="text-xs text-gray-500 mt-1" x-text="stage.time || '--:--:--'"></span>
+              </div>
+
+              <!-- Connector Line -->
+              <div
+                x-show="index < stages.length - 1"
+                class="stage-line flex-1 h-0.5 mx-3"
+                :class="stage.status === 'completed' ? 'completed' : 'bg-gray-200'"
+              ></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Stage Details -->
+        <div class="mt-6 pt-6 border-t border-gray-200" x-show="stages[currentStage - 1]?.detail">
+          <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-sm text-gray-600" x-text="stages[currentStage - 1]?.detail"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-medium text-gray-900">Event Log</h3>
+          <p class="text-sm text-gray-500">Webhook events from Circle CPN</p>
+        </div>
+
+        <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+          <template x-if="events.length === 0">
+            <div class="p-8 text-center text-gray-500">
+              <p>No events yet. Click "Simulate Payment" to start.</p>
+            </div>
+          </template>
+
+          <template x-for="event in events" :key="event.id">
+            <div class="event-row px-6 py-4 hover:bg-gray-50">
+              <div class="flex items-start gap-4">
+                <span class="text-sm font-mono text-gray-400 whitespace-nowrap" x-text="event.timestamp"></span>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span
+                      class="text-xs px-2 py-0.5 rounded font-mono"
+                      :class="getEventTypeClass(event.type)"
+                      x-text="event.type"
+                    ></span>
+                    <span
+                      x-show="event.status"
+                      class="text-xs px-2 py-0.5 rounded-full"
+                      :class="{
+                        'bg-green-100 text-green-700': event.status === 'success',
+                        'bg-blue-100 text-blue-700': event.status === 'pending',
+                        'bg-amber-100 text-amber-700': event.status === 'processing'
+                      }"
+                      x-text="event.status"
+                    ></span>
+                  </div>
+                  <p class="text-sm text-gray-700" x-text="event.description"></p>
+                  <p x-show="event.detail" class="text-xs text-gray-500 mt-1 font-mono" x-text="event.detail"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function operationsMonitor() {
+      return {
+        isConnected: false,
+        connectionStatus: 'Checking...',
+        isRunning: false,
+        isPaused: false,
+        currentStage: 0,
+
+        payment: {
+          id: 'CPN-2026011601',
+          beneficiaryName: 'Proveedor Azteca SA de CV',
+          corridor: 'US-MX',
+          bfiName: 'Bitso',
+          sourceAmount: 25000,
+          destAmount: 445625,
+          destCurrency: 'MXN',
+          status: 'pending'
+        },
+
+        stages: [
+          { label: 'Quote Locked', status: 'pending', time: null, detail: null },
+          { label: 'Payment Created', status: 'pending', time: null, detail: null },
+          { label: 'Crypto Confirmed', status: 'pending', time: null, detail: null },
+          { label: 'Fiat Settled', status: 'pending', time: null, detail: null }
+        ],
+
+        events: [],
+        simulationTimeout: null,
+
+        init() {
+          const config = localStorage.getItem('circleConfig');
+          if (config) {
+            const parsed = JSON.parse(config);
+            this.isConnected = true;
+            this.connectionStatus = parsed.mode === 'live' ? 'Live API' : 'Mock Data';
+          } else {
+            this.connectionStatus = 'Not configured';
+          }
+
+          // Check if coming from compliance submission
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('submitted')) {
+            this.startSimulation();
+          }
+        },
+
+        getStatusLabel() {
+          if (this.payment.status === 'failed') return 'Failed';
+          if (this.currentStage === 0) return 'Pending';
+          if (this.currentStage === 4) return 'Completed';
+          return 'Processing';
+        },
+
+        formatAmount(amount, currency) {
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency
+          }).format(amount);
+        },
+
+        getCurrentTime() {
+          return new Date().toLocaleTimeString('en-US', { hour12: false });
+        },
+
+        getEventTypeClass(type) {
+          if (type.includes('completed') || type.includes('confirmed')) return 'bg-green-100 text-green-700';
+          if (type.includes('created') || type.includes('approved')) return 'bg-blue-100 text-blue-700';
+          if (type.includes('broadcast') || type.includes('initiated')) return 'bg-purple-100 text-purple-700';
+          return 'bg-gray-100 text-gray-700';
+        },
+
+        addEvent(type, description, detail = null, status = null) {
+          this.events.unshift({
+            id: Date.now(),
+            timestamp: this.getCurrentTime(),
+            type,
+            description,
+            detail,
+            status
+          });
+        },
+
+        async startSimulation() {
+          this.isRunning = true;
+          this.isPaused = false;
+          this.currentStage = 0;
+          this.events = [];
+
+          // Reset stages
+          this.stages.forEach(s => {
+            s.status = 'pending';
+            s.time = null;
+            s.detail = null;
+          });
+
+          // Stage 1: Quote Locked
+          await this.advanceStage(0, {
+            event: 'quote.locked',
+            description: 'Quote locked with Bitso at 17.85 MXN/USD',
+            detail: 'Quote ID: q-bitso-001, Expires: 30s'
+          });
+
+          // Stage 2: Payment Created
+          await this.waitWithPauseCheck(2000);
+          await this.advanceStage(1, {
+            event: 'payment.created',
+            description: 'Payment accepted, pending BFI approval',
+            detail: 'Payment ID: ' + this.payment.id
+          });
+
+          await this.waitWithPauseCheck(1500);
+          this.addEvent('payment.bfi_approved', 'Bitso approved, ready for crypto transfer', null, 'success');
+
+          // Stage 3: Crypto Confirmed
+          await this.waitWithPauseCheck(2000);
+          this.stages[2].status = 'active';
+          this.stages[2].detail = 'Broadcasting USDC transfer to Polygon...';
+          this.addEvent('crypto.broadcast', 'Transaction broadcast to Polygon network', 'Tx: 0x8a3f...7d2e', 'processing');
+
+          await this.waitWithPauseCheck(3000);
+          const blockNumber = 52847102 + Math.floor(Math.random() * 1000);
+          await this.advanceStage(2, {
+            event: 'crypto.confirmed',
+            description: 'Confirmed in block #' + blockNumber.toLocaleString(),
+            detail: 'Tx Hash: 0x8a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a'
+          });
+
+          // Stage 4: Fiat Settled
+          await this.waitWithPauseCheck(2500);
+          this.stages[3].status = 'active';
+          this.stages[3].detail = 'Bitso initiating SPEI transfer...';
+          this.addEvent('fiat.initiated', 'SPEI transfer initiated to beneficiary', 'Ref: SPEI-' + Date.now(), 'processing');
+
+          await this.waitWithPauseCheck(4000);
+          await this.advanceStage(3, {
+            event: 'payment.completed',
+            description: 'Beneficiary received ' + this.formatAmount(this.payment.destAmount, 'MXN'),
+            detail: 'Settlement time: ~2 minutes'
+          });
+
+          this.isRunning = false;
+          this.payment.status = 'completed';
+        },
+
+        async advanceStage(index, eventData) {
+          // Complete previous stages
+          for (let i = 0; i < index; i++) {
+            if (this.stages[i].status !== 'completed') {
+              this.stages[i].status = 'completed';
+            }
+          }
+
+          // Mark current as completed
+          this.stages[index].status = 'completed';
+          this.stages[index].time = this.getCurrentTime();
+          this.stages[index].detail = eventData.description;
+          this.currentStage = index + 1;
+
+          // Add event
+          this.addEvent(eventData.event, eventData.description, eventData.detail, 'success');
+
+          // Mark next as active if exists
+          if (index < this.stages.length - 1) {
+            this.stages[index + 1].status = 'active';
+          }
+        },
+
+        async waitWithPauseCheck(ms) {
+          const interval = 100;
+          let elapsed = 0;
+
+          while (elapsed < ms) {
+            if (this.isPaused) {
+              await new Promise(resolve => {
+                const checkPause = setInterval(() => {
+                  if (!this.isPaused) {
+                    clearInterval(checkPause);
+                    resolve();
+                  }
+                }, 100);
+              });
+            }
+            await new Promise(resolve => setTimeout(resolve, interval));
+            elapsed += interval;
+          }
+        },
+
+        togglePause() {
+          this.isPaused = !this.isPaused;
+        },
+
+        resetSimulation() {
+          this.isRunning = false;
+          this.isPaused = false;
+          this.currentStage = 0;
+          this.events = [];
+          this.payment.status = 'pending';
+
+          this.stages.forEach(s => {
+            s.status = 'pending';
+            s.time = null;
+            s.detail = null;
+          });
+        }
+      };
+    }
+  </script>
+</body>
+</html>

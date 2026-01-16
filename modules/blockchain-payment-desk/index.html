@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blockchain Payment Desk | Circle Payment Factory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #0052FF;
+      --color-primary-dark: #0041CC;
+    }
+    .bg-primary { background-color: var(--color-primary); }
+    .text-primary { color: var(--color-primary); }
+    .border-primary { border-color: var(--color-primary); }
+    .hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
+
+    .chain-card {
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .chain-card:hover {
+      border-color: var(--color-primary);
+    }
+    .chain-card.selected {
+      border-color: var(--color-primary);
+      background-color: #EBF5FF;
+    }
+
+    .status-step {
+      transition: all 0.3s ease;
+    }
+    .status-step.completed .step-icon {
+      background-color: #10B981;
+      color: white;
+    }
+    .status-step.active .step-icon {
+      background-color: var(--color-primary);
+      color: white;
+      animation: pulse 1.5s infinite;
+    }
+    .status-step.pending .step-icon {
+      background-color: #E5E7EB;
+      color: #9CA3AF;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <script src="../../shared/mock-data.js"></script>
+  <script src="../../shared/circle-api.js"></script>
+
+  <div x-data="blockchainDesk()" x-init="init()" class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="../../index.html" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </a>
+          <div>
+            <h1 class="text-lg font-semibold text-gray-900">Blockchain Payment Desk</h1>
+            <p class="text-sm text-gray-500">Execute direct USDC transfers to wallet addresses</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-500" x-text="connectionStatus"></span>
+          <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-green-500' : 'bg-amber-500'"></span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 py-6">
+
+      <!-- Step 1: Payment Details -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6" x-show="step >= 1">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-medium text-gray-900">Payment Details</h2>
+          <span class="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-full">Step 1 of 4</span>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Recipient Name</label>
+            <input
+              type="text"
+              x-model="payment.recipientName"
+              placeholder="DeFi Protocol Ltd"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Amount (USDC)</label>
+            <input
+              type="number"
+              x-model="payment.amount"
+              placeholder="10000"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Recipient Wallet Address</label>
+            <input
+              type="text"
+              x-model="payment.address"
+              @input="validateAddress()"
+              placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+              class="w-full px-4 py-2 font-mono text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              :class="addressValidation.checked ? (addressValidation.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'"
+            >
+            <div class="mt-2 flex items-center gap-2" x-show="addressValidation.checked">
+              <template x-if="addressValidation.valid">
+                <span class="text-sm text-green-600 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Valid <span x-text="addressValidation.chain"></span> address
+                </span>
+              </template>
+              <template x-if="!addressValidation.valid">
+                <span class="text-sm text-red-600 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  <span x-text="addressValidation.error"></span>
+                </span>
+              </template>
+            </div>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Reference / Memo</label>
+            <input
+              type="text"
+              x-model="payment.reference"
+              placeholder="Invoice INV-2026-0142"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button
+            @click="checkBalance()"
+            :disabled="!canProceedToBalance"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Check Balance
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Balance Check & Chain Selection -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6" x-show="step >= 2" x-transition>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-medium text-gray-900">Wallet Balance & Chain Selection</h2>
+          <span class="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-full">Step 2 of 4</span>
+        </div>
+
+        <!-- Balance Summary -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Available USDC Balance</p>
+              <p class="text-2xl font-bold text-gray-900" x-text="formatAmount(totalBalance)"></p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-gray-500">Transfer Amount</p>
+              <p class="text-2xl font-bold" :class="hasEnoughBalance ? 'text-green-600' : 'text-red-600'" x-text="formatAmount(payment.amount)"></p>
+            </div>
+          </div>
+          <div class="mt-4" x-show="!hasEnoughBalance">
+            <p class="text-sm text-red-600">Insufficient balance. Please add funds or reduce the transfer amount.</p>
+          </div>
+        </div>
+
+        <!-- Chain Cards -->
+        <h3 class="text-sm font-medium text-gray-700 mb-3">Select Blockchain</h3>
+        <div class="grid md:grid-cols-3 gap-4">
+          <template x-for="chain in availableChains" :key="chain.chain">
+            <div
+              class="chain-card border-2 rounded-xl p-4"
+              :class="{ 'selected': selectedChain === chain.chain }"
+              @click="selectChain(chain.chain)"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center" :style="'background-color:' + chain.color + '20'">
+                    <span class="text-xs font-bold" :style="'color:' + chain.color" x-text="chain.chain"></span>
+                  </div>
+                  <span class="font-medium" x-text="chain.chainName"></span>
+                </div>
+              </div>
+              <dl class="space-y-1 text-sm">
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Balance</dt>
+                  <dd class="font-medium" x-text="formatAmount(chain.balance)"></dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Est. Gas</dt>
+                  <dd class="text-gray-700" x-text="'$' + chain.avgGas.toFixed(2)"></dd>
+                </div>
+              </dl>
+              <div class="mt-3 pt-3 border-t border-gray-200">
+                <span
+                  class="text-xs px-2 py-1 rounded-full"
+                  :class="chain.balance >= payment.amount ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  x-text="chain.balance >= payment.amount ? 'Sufficient' : 'Insufficient'"
+                ></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button
+            @click="estimateFees()"
+            :disabled="!selectedChain"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Estimate Fees
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Fee Estimation -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6" x-show="step >= 3" x-transition>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-medium text-gray-900">Fee Estimation</h2>
+          <span class="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-full">Step 3 of 4</span>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-6">
+          <dl class="space-y-4">
+            <div class="flex justify-between items-center">
+              <dt class="text-gray-600">Transfer Amount</dt>
+              <dd class="font-medium text-lg" x-text="formatAmount(payment.amount) + ' USDC'"></dd>
+            </div>
+            <div class="flex justify-between items-center">
+              <dt class="text-gray-600">Network</dt>
+              <dd class="font-medium" x-text="getChainName(selectedChain)"></dd>
+            </div>
+            <div class="flex justify-between items-center">
+              <dt class="text-gray-600">Estimated Gas Fee</dt>
+              <dd class="font-medium" x-text="'$' + feeEstimate.gas.toFixed(2) + ' USDC'"></dd>
+            </div>
+            <div class="flex justify-between items-center">
+              <dt class="text-gray-600">Est. Confirmation Time</dt>
+              <dd class="text-gray-700" x-text="feeEstimate.time"></dd>
+            </div>
+            <div class="border-t border-gray-300 pt-4 flex justify-between items-center">
+              <dt class="font-medium text-gray-900">Total</dt>
+              <dd class="font-bold text-xl text-primary" x-text="formatAmount(parseFloat(payment.amount) + feeEstimate.gas) + ' USDC'"></dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            @click="step = 2; selectedChain = null;"
+            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Back
+          </button>
+          <button
+            @click="executeTransfer()"
+            class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Execute Transfer
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 4: Transfer Status -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6" x-show="step >= 4" x-transition>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-medium text-gray-900">Transfer Status</h2>
+          <span
+            class="text-sm px-3 py-1 rounded-full"
+            :class="{
+              'bg-blue-100 text-blue-700': transferStatus !== 'completed' && transferStatus !== 'failed',
+              'bg-green-100 text-green-700': transferStatus === 'completed',
+              'bg-red-100 text-red-700': transferStatus === 'failed'
+            }"
+            x-text="transferStatus === 'completed' ? 'Completed' : (transferStatus === 'failed' ? 'Failed' : 'Processing')"
+          ></span>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="flex items-center justify-between mb-8">
+          <template x-for="(stepInfo, index) in transferSteps" :key="index">
+            <div class="flex-1 flex items-center">
+              <div
+                class="status-step flex flex-col items-center"
+                :class="{
+                  'completed': stepInfo.status === 'completed',
+                  'active': stepInfo.status === 'active',
+                  'pending': stepInfo.status === 'pending'
+                }"
+              >
+                <div class="step-icon w-10 h-10 rounded-full flex items-center justify-center mb-2">
+                  <template x-if="stepInfo.status === 'completed'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </template>
+                  <template x-if="stepInfo.status === 'active'">
+                    <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" stroke-dasharray="32" stroke-dashoffset="32"/>
+                    </svg>
+                  </template>
+                  <template x-if="stepInfo.status === 'pending'">
+                    <span class="text-sm font-medium" x-text="index + 1"></span>
+                  </template>
+                </div>
+                <span class="text-xs text-center" :class="stepInfo.status === 'pending' ? 'text-gray-400' : 'text-gray-700'" x-text="stepInfo.label"></span>
+              </div>
+              <div
+                x-show="index < transferSteps.length - 1"
+                class="flex-1 h-0.5 mx-2"
+                :class="stepInfo.status === 'completed' ? 'bg-green-500' : 'bg-gray-200'"
+              ></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Transaction Details -->
+        <div class="bg-gray-50 rounded-lg p-6" x-show="txHash">
+          <dl class="space-y-3">
+            <div class="flex justify-between items-center">
+              <dt class="text-gray-600">Transaction Hash</dt>
+              <dd class="font-mono text-sm text-primary">
+                <a :href="getExplorerUrl(txHash)" target="_blank" class="hover:underline flex items-center gap-1">
+                  <span x-text="truncateHash(txHash)"></span>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </a>
+              </dd>
+            </div>
+            <div class="flex justify-between items-center" x-show="blockNumber">
+              <dt class="text-gray-600">Block Number</dt>
+              <dd class="font-mono text-sm" x-text="blockNumber?.toLocaleString()"></dd>
+            </div>
+            <div class="flex justify-between items-center" x-show="confirmationTime">
+              <dt class="text-gray-600">Confirmed At</dt>
+              <dd class="text-sm" x-text="confirmationTime"></dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-6 flex justify-between">
+          <a href="../payment-operations-monitor/index.html" class="text-primary hover:underline text-sm">
+            View in Payment Monitor
+          </a>
+          <button
+            @click="resetForm()"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            New Transfer
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function blockchainDesk() {
+      return {
+        step: 1,
+        isConnected: false,
+        connectionStatus: 'Checking...',
+
+        payment: {
+          recipientName: '',
+          amount: '',
+          address: '',
+          reference: ''
+        },
+
+        addressValidation: {
+          checked: false,
+          valid: false,
+          chain: null,
+          error: null
+        },
+
+        availableChains: [],
+        selectedChain: null,
+        totalBalance: 0,
+
+        feeEstimate: {
+          gas: 0,
+          time: ''
+        },
+
+        transferStatus: 'pending',
+        transferSteps: [
+          { label: 'Signing', status: 'pending' },
+          { label: 'Broadcasting', status: 'pending' },
+          { label: 'Confirming', status: 'pending' },
+          { label: 'Complete', status: 'pending' }
+        ],
+
+        txHash: null,
+        blockNumber: null,
+        confirmationTime: null,
+
+        init() {
+          // Check connection status
+          const config = localStorage.getItem('circleConfig');
+          if (config) {
+            const parsed = JSON.parse(config);
+            this.isConnected = true;
+            this.connectionStatus = parsed.mode === 'live' ? 'Live API' : 'Mock Data';
+          } else {
+            this.connectionStatus = 'Not configured';
+          }
+
+          // Check URL params
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('address')) {
+            this.payment.address = params.get('address');
+            this.validateAddress();
+          }
+          if (params.get('amount')) {
+            this.payment.amount = params.get('amount');
+          }
+          if (params.get('name')) {
+            this.payment.recipientName = params.get('name');
+          }
+        },
+
+        get canProceedToBalance() {
+          return this.payment.amount > 0 && this.addressValidation.valid;
+        },
+
+        get hasEnoughBalance() {
+          return this.totalBalance >= parseFloat(this.payment.amount || 0);
+        },
+
+        validateAddress() {
+          const address = this.payment.address.trim();
+          if (!address) {
+            this.addressValidation = { checked: false, valid: false, chain: null, error: null };
+            return;
+          }
+
+          // EVM address check
+          if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+            this.addressValidation = { checked: true, valid: true, chain: 'EVM', error: null };
+            return;
+          }
+
+          // Solana address check
+          if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
+            this.addressValidation = { checked: true, valid: true, chain: 'Solana', error: null };
+            return;
+          }
+
+          this.addressValidation = { checked: true, valid: false, chain: null, error: 'Invalid address format' };
+        },
+
+        async checkBalance() {
+          // Load balances from mock data or API
+          const balances = MOCK_DATA.balances;
+          this.availableChains = balances.chains.filter(c => {
+            // Filter by address type
+            if (this.addressValidation.chain === 'Solana') {
+              return c.chain === 'SOL';
+            }
+            return c.chain !== 'SOL'; // EVM chains
+          });
+          this.totalBalance = this.availableChains.reduce((sum, c) => sum + c.balance, 0);
+          this.step = 2;
+
+          // Auto-select best chain based on balance and fees
+          const viable = this.availableChains.filter(c => c.balance >= parseFloat(this.payment.amount));
+          if (viable.length > 0) {
+            // Select chain with lowest gas
+            viable.sort((a, b) => a.avgGas - b.avgGas);
+            this.selectedChain = viable[0].chain;
+          }
+        },
+
+        selectChain(chain) {
+          const chainData = this.availableChains.find(c => c.chain === chain);
+          if (chainData && chainData.balance >= parseFloat(this.payment.amount)) {
+            this.selectedChain = chain;
+          }
+        },
+
+        getChainName(chain) {
+          const chainData = this.availableChains.find(c => c.chain === chain);
+          return chainData?.chainName || chain;
+        },
+
+        estimateFees() {
+          const fees = MOCK_DATA.feeEstimates[this.selectedChain] || { gas: 0.10, time: '~1 min' };
+          this.feeEstimate = fees;
+          this.step = 3;
+        },
+
+        async executeTransfer() {
+          this.step = 4;
+          this.transferStatus = 'processing';
+
+          // Simulate transfer steps
+          const steps = ['signing', 'broadcasting', 'confirming', 'complete'];
+
+          for (let i = 0; i < steps.length; i++) {
+            this.transferSteps[i].status = 'active';
+
+            await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+
+            this.transferSteps[i].status = 'completed';
+
+            if (i === 1) {
+              // Generate mock tx hash after broadcasting
+              this.txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+            }
+
+            if (i === 2) {
+              // Add block number after confirming
+              this.blockNumber = 19847293 + Math.floor(Math.random() * 1000);
+              this.confirmationTime = new Date().toLocaleString();
+            }
+          }
+
+          this.transferStatus = 'completed';
+        },
+
+        formatAmount(amount) {
+          if (!amount) return '$0.00';
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+          }).format(amount);
+        },
+
+        truncateHash(hash) {
+          if (!hash) return '';
+          return hash.substring(0, 10) + '...' + hash.substring(hash.length - 8);
+        },
+
+        getExplorerUrl(hash) {
+          const explorers = {
+            'ETH': 'https://etherscan.io/tx/',
+            'MATIC': 'https://polygonscan.com/tx/',
+            'ARB': 'https://arbiscan.io/tx/',
+            'BASE': 'https://basescan.org/tx/',
+            'SOL': 'https://solscan.io/tx/'
+          };
+          return (explorers[this.selectedChain] || explorers['ETH']) + hash;
+        },
+
+        resetForm() {
+          this.step = 1;
+          this.payment = { recipientName: '', amount: '', address: '', reference: '' };
+          this.addressValidation = { checked: false, valid: false, chain: null, error: null };
+          this.selectedChain = null;
+          this.transferStatus = 'pending';
+          this.transferSteps = [
+            { label: 'Signing', status: 'pending' },
+            { label: 'Broadcasting', status: 'pending' },
+            { label: 'Confirming', status: 'pending' },
+            { label: 'Complete', status: 'pending' }
+          ];
+          this.txHash = null;
+          this.blockNumber = null;
+          this.confirmationTime = null;
+        }
+      };
+    }
+  </script>
+</body>
+</html>

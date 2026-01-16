@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beneficiary Compliance | Circle Payment Factory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #0052FF;
+      --color-primary-dark: #0041CC;
+    }
+    .bg-primary { background-color: var(--color-primary); }
+    .text-primary { color: var(--color-primary); }
+    .border-primary { border-color: var(--color-primary); }
+    .hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
+
+    .field-valid input, .field-valid select {
+      border-color: #10B981;
+    }
+    .field-invalid input, .field-invalid select {
+      border-color: #EF4444;
+    }
+
+    .encryption-preview {
+      font-family: monospace;
+      font-size: 0.75rem;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <script src="../../shared/mock-data.js"></script>
+  <script src="../../shared/circle-api.js"></script>
+
+  <div x-data="complianceForm()" x-init="init()" class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="../../index.html" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </a>
+          <div>
+            <h1 class="text-lg font-semibold text-gray-900">Beneficiary Compliance</h1>
+            <p class="text-sm text-gray-500">Travel rule data collection for CPN payments</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span
+            class="text-sm px-3 py-1 rounded-full"
+            :class="isCompliant ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
+            x-text="isCompliant ? 'Compliance Ready' : 'Data Required'"
+          ></span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto px-4 py-6">
+      <div class="grid lg:grid-cols-3 gap-6">
+
+        <!-- Left: Form Panels -->
+        <div class="lg:col-span-2 space-y-6">
+
+          <!-- Originator Section (Pre-filled) -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-medium text-gray-900">Originator Information</h2>
+              <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">Pre-filled</span>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Legal Entity Name</label>
+                <input
+                  type="text"
+                  x-model="originator.name"
+                  disabled
+                  class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tax ID / LEI</label>
+                <input
+                  type="text"
+                  x-model="originator.taxId"
+                  disabled
+                  class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                >
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Registered Address</label>
+                <input
+                  type="text"
+                  x-model="originator.address"
+                  disabled
+                  class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                >
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Wallet Address</label>
+                <input
+                  type="text"
+                  x-model="originator.walletAddress"
+                  disabled
+                  class="w-full px-3 py-2 font-mono text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Beneficiary Section -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Beneficiary Information</h2>
+            <p class="text-sm text-gray-500 mb-6">Required for CPN cross-border payments per travel rule regulations.</p>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <!-- Full Name -->
+              <div class="md:col-span-2" :class="getFieldClass('name')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Full Legal Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  x-model="beneficiary.name"
+                  @blur="validateField('name')"
+                  placeholder="Juan Perez Garcia"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <p x-show="errors.name" class="text-xs text-red-500 mt-1" x-text="errors.name"></p>
+              </div>
+
+              <!-- Street Address -->
+              <div class="md:col-span-2" :class="getFieldClass('street')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Street Address <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  x-model="beneficiary.street"
+                  @blur="validateField('street')"
+                  placeholder="Av. Insurgentes Sur 1234"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <p x-show="errors.street" class="text-xs text-red-500 mt-1" x-text="errors.street"></p>
+              </div>
+
+              <!-- City -->
+              <div :class="getFieldClass('city')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  City <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  x-model="beneficiary.city"
+                  @blur="validateField('city')"
+                  placeholder="Ciudad de Mexico"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <p x-show="errors.city" class="text-xs text-red-500 mt-1" x-text="errors.city"></p>
+              </div>
+
+              <!-- Postal Code -->
+              <div :class="getFieldClass('postalCode')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Postal Code <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  x-model="beneficiary.postalCode"
+                  @blur="validateField('postalCode')"
+                  placeholder="03900"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <p x-show="errors.postalCode" class="text-xs text-red-500 mt-1" x-text="errors.postalCode"></p>
+              </div>
+
+              <!-- Country -->
+              <div :class="getFieldClass('country')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Country <span class="text-red-500">*</span>
+                </label>
+                <select
+                  x-model="beneficiary.country"
+                  @change="validateField('country'); updateIdFormat()"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="">Select country</option>
+                  <template x-for="(info, code) in countries" :key="code">
+                    <option :value="code" x-text="info.name"></option>
+                  </template>
+                </select>
+                <p x-show="errors.country" class="text-xs text-red-500 mt-1" x-text="errors.country"></p>
+              </div>
+
+              <!-- ID Type -->
+              <div :class="getFieldClass('idType')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  ID Type <span class="text-red-500">*</span>
+                </label>
+                <select
+                  x-model="beneficiary.idType"
+                  @change="validateField('idType')"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="">Select ID type</option>
+                  <option value="passport">Passport</option>
+                  <option value="national_id">National ID</option>
+                  <option value="tax_id">Tax ID</option>
+                </select>
+                <p x-show="errors.idType" class="text-xs text-red-500 mt-1" x-text="errors.idType"></p>
+              </div>
+
+              <!-- ID Number -->
+              <div :class="getFieldClass('idNumber')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  ID Number <span class="text-red-500">*</span>
+                  <span x-show="idFormatHint" class="text-xs text-gray-400 font-normal" x-text="'(' + idFormatHint + ')'"></span>
+                </label>
+                <input
+                  type="text"
+                  x-model="beneficiary.idNumber"
+                  @blur="validateField('idNumber')"
+                  :placeholder="idPlaceholder"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <p x-show="errors.idNumber" class="text-xs text-red-500 mt-1" x-text="errors.idNumber"></p>
+              </div>
+
+              <!-- Date of Birth -->
+              <div :class="getFieldClass('dob')">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Date of Birth <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  x-model="beneficiary.dob"
+                  @blur="validateField('dob')"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <p x-show="errors.dob" class="text-xs text-red-500 mt-1" x-text="errors.dob"></p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Validation & Encryption Panel -->
+        <div class="space-y-6">
+
+          <!-- Validation Status -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Validation Status</h3>
+
+            <div class="space-y-3">
+              <template x-for="field in requiredFields" :key="field.key">
+                <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                  <span class="text-sm text-gray-600" x-text="field.label"></span>
+                  <span
+                    class="flex items-center gap-1 text-sm"
+                    :class="isFieldValid(field.key) ? 'text-green-600' : 'text-gray-400'"
+                  >
+                    <template x-if="isFieldValid(field.key)">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </template>
+                    <template x-if="!isFieldValid(field.key)">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </template>
+                    <span x-text="isFieldValid(field.key) ? 'Valid' : 'Required'"></span>
+                  </span>
+                </div>
+              </template>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-200">
+              <div class="flex items-center justify-between">
+                <span class="font-medium text-gray-900">Overall Status</span>
+                <span
+                  class="text-sm px-3 py-1 rounded-full"
+                  :class="isCompliant ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
+                  x-text="isCompliant ? 'Ready' : validFieldsCount + '/' + requiredFields.length"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Encryption Preview -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">Encryption Preview</h3>
+              <button
+                @click="showEncrypted = !showEncrypted"
+                class="text-sm text-primary hover:underline"
+                x-text="showEncrypted ? 'Hide' : 'Show'"
+              ></button>
+            </div>
+
+            <div x-show="showEncrypted" x-transition>
+              <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                <p class="encryption-preview text-green-400" x-text="encryptedPreview"></p>
+              </div>
+
+              <dl class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Algorithm</dt>
+                  <dd class="text-gray-700">RSA-OAEP-256</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Key ID</dt>
+                  <dd class="text-gray-700 font-mono text-xs">circle-pub-key-001</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Fields Encrypted</dt>
+                  <dd class="text-gray-700" x-text="validFieldsCount"></dd>
+                </div>
+              </dl>
+            </div>
+
+            <div x-show="!showEncrypted" class="text-sm text-gray-500">
+              <p>Travel rule data will be encrypted using Circle's public key.</p>
+              <p class="mt-2">Only Circle and the receiving BFI can decrypt this data.</p>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            @click="submitCompliance()"
+            :disabled="!isCompliant"
+            class="w-full px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          >
+            Submit to CPN
+          </button>
+
+          <a
+            href="../payment-operations-monitor/index.html"
+            class="block text-center text-sm text-primary hover:underline"
+          >
+            Skip to Payment Monitor (Demo)
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function complianceForm() {
+      return {
+        showEncrypted: false,
+
+        originator: {
+          name: 'Acme Corporation',
+          address: '123 Financial District, New York, NY 10004, USA',
+          taxId: '12-3456789',
+          walletAddress: '0x8ba1f109551bD432803012645Ac136ddd64DBA72'
+        },
+
+        beneficiary: {
+          name: '',
+          street: '',
+          city: '',
+          postalCode: '',
+          country: '',
+          idType: '',
+          idNumber: '',
+          dob: ''
+        },
+
+        errors: {},
+        touched: {},
+
+        countries: MOCK_DATA.countries,
+
+        requiredFields: [
+          { key: 'name', label: 'Full Name' },
+          { key: 'street', label: 'Street Address' },
+          { key: 'city', label: 'City' },
+          { key: 'postalCode', label: 'Postal Code' },
+          { key: 'country', label: 'Country' },
+          { key: 'idType', label: 'ID Type' },
+          { key: 'idNumber', label: 'ID Number' },
+          { key: 'dob', label: 'Date of Birth' }
+        ],
+
+        init() {
+          // Pre-fill from URL params if available
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('corridor')) {
+            const dest = params.get('corridor').split('-')[1];
+            if (dest && this.countries[dest]) {
+              this.beneficiary.country = dest;
+            }
+          }
+        },
+
+        get idFormatHint() {
+          if (!this.beneficiary.country) return '';
+          return this.countries[this.beneficiary.country]?.idFormat || '';
+        },
+
+        get idPlaceholder() {
+          const placeholders = {
+            'MX': 'PEGJ850315HDFRNN01',
+            'BR': '123.456.789-01',
+            'NG': '12345678901',
+            'CO': '1234567890'
+          };
+          return placeholders[this.beneficiary.country] || 'Enter ID number';
+        },
+
+        get isCompliant() {
+          return this.requiredFields.every(f => this.isFieldValid(f.key));
+        },
+
+        get validFieldsCount() {
+          return this.requiredFields.filter(f => this.isFieldValid(f.key)).length;
+        },
+
+        get encryptedPreview() {
+          const data = JSON.stringify({
+            beneficiary: {
+              name: this.beneficiary.name || '[name]',
+              country: this.beneficiary.country || '[country]'
+            }
+          });
+          const base64 = btoa(data);
+          return 'eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.' +
+                 base64.substring(0, 40) + '...[encrypted]';
+        },
+
+        isFieldValid(key) {
+          const value = this.beneficiary[key];
+          if (!value) return false;
+
+          // Special validation for ID number based on country
+          if (key === 'idNumber' && this.beneficiary.country) {
+            const pattern = this.countries[this.beneficiary.country]?.idPattern;
+            if (pattern && !pattern.test(value)) {
+              return false;
+            }
+          }
+
+          return true;
+        },
+
+        validateField(key) {
+          this.touched[key] = true;
+          this.errors[key] = null;
+
+          const value = this.beneficiary[key];
+
+          if (!value) {
+            this.errors[key] = 'This field is required';
+            return;
+          }
+
+          // Special validation for ID number
+          if (key === 'idNumber' && this.beneficiary.country) {
+            const country = this.countries[this.beneficiary.country];
+            if (country?.idPattern && !country.idPattern.test(value)) {
+              this.errors[key] = `Invalid format for ${country.idFormat}`;
+            }
+          }
+
+          // DOB validation
+          if (key === 'dob') {
+            const date = new Date(value);
+            const today = new Date();
+            const age = (today - date) / (365.25 * 24 * 60 * 60 * 1000);
+            if (age < 18) {
+              this.errors[key] = 'Beneficiary must be at least 18 years old';
+            }
+          }
+        },
+
+        getFieldClass(key) {
+          if (!this.touched[key]) return '';
+          return this.errors[key] ? 'field-invalid' : 'field-valid';
+        },
+
+        updateIdFormat() {
+          // Reset ID number when country changes
+          this.beneficiary.idNumber = '';
+          this.errors.idNumber = null;
+        },
+
+        async submitCompliance() {
+          if (!this.isCompliant) return;
+
+          // Encrypt data (mock)
+          const encrypted = await TravelRuleEncryption.encrypt({
+            originator: this.originator,
+            beneficiary: this.beneficiary
+          });
+
+          console.log('Encrypted travel rule data:', encrypted);
+
+          // Navigate to payment monitor
+          window.location.href = '../payment-operations-monitor/index.html?submitted=true';
+        }
+      };
+    }
+  </script>
+</body>
+</html>

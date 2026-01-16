@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MSG-2026011601</MsgId>
+      <CreDtTm>2026-01-16T10:30:00Z</CreDtTm>
+      <NbOfTxs>5</NbOfTxs>
+      <CtrlSum>130000.00</CtrlSum>
+      <InitgPty>
+        <Nm>Acme Corporation</Nm>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>12-3456789</Id>
+              <SchmeNm>
+                <Cd>TXID</Cd>
+              </SchmeNm>
+            </Othr>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMTINF-001</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
+      <NbOfTxs>5</NbOfTxs>
+      <CtrlSum>130000.00</CtrlSum>
+      <ReqdExctnDt>2026-01-17</ReqdExctnDt>
+      <Dbtr>
+        <Nm>Acme Corporation</Nm>
+        <PstlAdr>
+          <StrtNm>123 Financial District</StrtNm>
+          <PstCd>10004</PstCd>
+          <TwnNm>New York</TwnNm>
+          <Ctry>US</Ctry>
+        </PstlAdr>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>US12345678901234567890</IBAN>
+        </Id>
+        <Ccy>USD</Ccy>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>CHASUS33XXX</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+
+      <!-- Payment 1: Mexico - CPN Eligible -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-2026011601</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">25000.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>BABORSMXMID</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Proveedor Azteca SA de CV</Nm>
+          <PstlAdr>
+            <StrtNm>Av. Insurgentes Sur 1234</StrtNm>
+            <PstCd>03900</PstCd>
+            <TwnNm>Ciudad de Mexico</TwnNm>
+            <Ctry>MX</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>012180001234567890</Id>
+              <SchmeNm>
+                <Cd>CLABE</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Invoice INV-2026-0142 - Consulting Services</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 2: Brazil - CPN Eligible -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-2026011602</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">15000.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>ITABORJPXXX</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Comercio Brasil Ltda</Nm>
+          <PstlAdr>
+            <StrtNm>Rua Augusta 1508</StrtNm>
+            <PstCd>01304-001</PstCd>
+            <TwnNm>Sao Paulo</TwnNm>
+            <Ctry>BR</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>123456789012</Id>
+              <SchmeNm>
+                <Cd>BRAC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>PO-2026-0089 - Hardware Components</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 3: Blockchain Address - Direct USDC -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-2026011603</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USDC">10000.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>DeFi Protocol Ltd</Nm>
+          <PstlAdr>
+            <Ctry>KY</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb</Id>
+              <SchmeNm>
+                <Cd>BLKC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Protocol Development Milestone 3</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 4: UK - Traditional SWIFT -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-2026011604</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="GBP">50000.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>WESTGB2LXXX</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Acme UK Limited</Nm>
+          <PstlAdr>
+            <StrtNm>100 Liverpool Street</StrtNm>
+            <PstCd>EC2M 2AT</PstCd>
+            <TwnNm>London</TwnNm>
+            <Ctry>GB</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>GB82WEST12345698765432</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Intercompany Transfer Q1-2026</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 5: Germany - Traditional SEPA -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-2026011605</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">30000.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>COBADEFFXXX</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Euro Supplies GmbH</Nm>
+          <PstlAdr>
+            <StrtNm>Friedrichstrasse 123</StrtNm>
+            <PstCd>10117</PstCd>
+            <TwnNm>Berlin</TwnNm>
+            <Ctry>DE</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013000</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Office Equipment Order OE-2026-0034</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

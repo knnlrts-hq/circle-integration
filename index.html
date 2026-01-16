@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Circle Payment Factory | ISO 20022 Integration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #0052FF;
+      --color-primary-dark: #0041CC;
+    }
+    .bg-primary { background-color: var(--color-primary); }
+    .bg-primary-dark { background-color: var(--color-primary-dark); }
+    .text-primary { color: var(--color-primary); }
+    .border-primary { border-color: var(--color-primary); }
+    .hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
+
+    .module-card {
+      transition: all 0.2s ease;
+    }
+    .module-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 40px rgba(0, 82, 255, 0.1);
+    }
+
+    .status-badge {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div x-data="consoleState()" class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <header class="text-center mb-12">
+      <div class="flex items-center justify-center gap-3 mb-4">
+        <svg class="w-10 h-10 text-primary" viewBox="0 0 40 40" fill="currentColor">
+          <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="3"/>
+          <circle cx="20" cy="20" r="8" fill="currentColor"/>
+        </svg>
+        <h1 class="text-3xl font-bold text-gray-900">Circle Payment Factory</h1>
+      </div>
+      <p class="text-gray-600 text-lg">ISO 20022 Integration Proof of Concept</p>
+      <p class="text-gray-500 text-sm mt-2">pain.001.001.03 processing with Circle Payments Network</p>
+    </header>
+
+    <!-- API Configuration Banner -->
+    <div x-show="!apiConfigured" class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div class="flex-1">
+          <h3 class="font-medium text-amber-800">Circle API Configuration</h3>
+          <p class="text-sm text-amber-700 mt-1">Enter your Circle API key for live data, or continue with mock data for demonstration.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <input
+              type="password"
+              x-model="apiKey"
+              placeholder="Enter Circle API key"
+              class="flex-1 min-w-64 px-3 py-2 border border-amber-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+            <button
+              @click="configureAPI()"
+              class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-dark transition-colors"
+            >
+              Connect
+            </button>
+            <button
+              @click="useMockData()"
+              class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Use Mock Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connected Status -->
+    <div x-show="apiConfigured" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="text-green-800 font-medium" x-text="connectionMode === 'live' ? 'Connected to Circle API' : 'Using Mock Data'"></span>
+          <span class="text-green-600 text-sm" x-show="connectionMode === 'live'">(Production)</span>
+        </div>
+        <button @click="disconnect()" class="text-sm text-green-700 hover:text-green-900 underline">
+          Disconnect
+        </button>
+      </div>
+    </div>
+
+    <!-- Module Grid -->
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Payment File Processor -->
+      <a href="modules/payment-file-processor/index.html" class="module-card bg-white rounded-xl border border-gray-200 p-6 block">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <span class="status-badge bg-blue-100 text-blue-700">3 files pending</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Payment File Processor</h2>
+        <p class="text-gray-600 text-sm">Parse pain.001.001.03 files and route payments to Circle or traditional rails</p>
+      </a>
+
+      <!-- Blockchain Payment Desk -->
+      <a href="modules/blockchain-payment-desk/index.html" class="module-card bg-white rounded-xl border border-gray-200 p-6 block">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+          </div>
+          <span class="status-badge bg-green-100 text-green-700">Ready</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Blockchain Payment Desk</h2>
+        <p class="text-gray-600 text-sm">Execute direct USDC transfers to blockchain wallet addresses</p>
+      </a>
+
+      <!-- Cross-Border Rate Desk -->
+      <a href="modules/cross-border-rate-desk/index.html" class="module-card bg-white rounded-xl border border-gray-200 p-6 block">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="status-badge bg-emerald-100 text-emerald-700">4 corridors</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Cross-Border Rate Desk</h2>
+        <p class="text-gray-600 text-sm">Compare BFI quotes and lock rates for CPN cross-border payments</p>
+      </a>
+
+      <!-- Beneficiary Compliance -->
+      <a href="modules/beneficiary-compliance/index.html" class="module-card bg-white rounded-xl border border-gray-200 p-6 block">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </div>
+          <span class="status-badge bg-green-100 text-green-700">Ready</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Beneficiary Compliance</h2>
+        <p class="text-gray-600 text-sm">Collect and encrypt travel rule data for CPN regulatory compliance</p>
+      </a>
+
+      <!-- Payment Operations Monitor -->
+      <a href="modules/payment-operations-monitor/index.html" class="module-card bg-white rounded-xl border border-gray-200 p-6 block">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <span class="status-badge bg-rose-100 text-rose-700">2 in flight</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Payment Operations Monitor</h2>
+        <p class="text-gray-600 text-sm">Track payment settlement through CPN's 4-stage lifecycle</p>
+      </a>
+
+      <!-- Treasury Liquidity Dashboard -->
+      <a href="modules/treasury-liquidity-dashboard/index.html" class="module-card bg-white rounded-xl border border-gray-200 p-6 block">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
+          <span class="status-badge bg-indigo-100 text-indigo-700">$1.24M total</span>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Treasury Liquidity Dashboard</h2>
+        <p class="text-gray-600 text-sm">View consolidated USDC positions across multiple blockchains</p>
+      </a>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 pt-8 border-t border-gray-200">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+        <div class="flex items-center gap-4">
+          <a href="https://developers.circle.com" target="_blank" class="hover:text-primary transition-colors">
+            Circle API Docs
+          </a>
+          <span class="text-gray-300">|</span>
+          <a href="docs/plans/2026-01-16-circle-payment-factory-poc-design.md" class="hover:text-primary transition-colors">
+            Design Document
+          </a>
+          <span class="text-gray-300">|</span>
+          <a href="https://github.com" target="_blank" class="hover:text-primary transition-colors">
+            GitHub
+          </a>
+        </div>
+        <div class="text-gray-400">
+          ISO 20022 pain.001.001.03 + Circle Payments Network
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    function consoleState() {
+      return {
+        apiKey: '',
+        apiConfigured: false,
+        connectionMode: null, // 'live' or 'mock'
+
+        init() {
+          // Check for stored configuration
+          const stored = localStorage.getItem('circleConfig');
+          if (stored) {
+            const config = JSON.parse(stored);
+            this.apiConfigured = true;
+            this.connectionMode = config.mode;
+          }
+        },
+
+        configureAPI() {
+          if (this.apiKey.trim()) {
+            localStorage.setItem('circleConfig', JSON.stringify({
+              mode: 'live',
+              apiKey: this.apiKey
+            }));
+            this.apiConfigured = true;
+            this.connectionMode = 'live';
+          }
+        },
+
+        useMockData() {
+          localStorage.setItem('circleConfig', JSON.stringify({
+            mode: 'mock',
+            apiKey: null
+          }));
+          this.apiConfigured = true;
+          this.connectionMode = 'mock';
+        },
+
+        disconnect() {
+          localStorage.removeItem('circleConfig');
+          this.apiConfigured = false;
+          this.connectionMode = null;
+          this.apiKey = '';
+        }
+      };
+    }
+  </script>
+</body>
+</html>

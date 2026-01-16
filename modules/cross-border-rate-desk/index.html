@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross-Border Rate Desk | Circle Payment Factory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #0052FF;
+      --color-primary-dark: #0041CC;
+    }
+    .bg-primary { background-color: var(--color-primary); }
+    .text-primary { color: var(--color-primary); }
+    .border-primary { border-color: var(--color-primary); }
+    .hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
+
+    .quote-card {
+      transition: all 0.2s ease;
+    }
+    .quote-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    .quote-card.selected {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(0, 82, 255, 0.2);
+    }
+    .quote-card.best {
+      border-color: #10B981;
+    }
+
+    .countdown-bar {
+      transition: width 1s linear;
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .animate-pulse-green {
+      animation: pulse-green 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <script src="../../shared/mock-data.js"></script>
+  <script src="../../shared/circle-api.js"></script>
+
+  <div x-data="rateDeck()" x-init="init()" class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="../../index.html" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </a>
+          <div>
+            <h1 class="text-lg font-semibold text-gray-900">Cross-Border Rate Desk</h1>
+            <p class="text-sm text-gray-500">Compare BFI quotes for CPN cross-border payments</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-500" x-text="connectionStatus"></span>
+          <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-green-500' : 'bg-amber-500'"></span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto px-4 py-6">
+
+      <!-- Payment Summary Bar -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-6">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">From</label>
+              <select
+                x-model="payment.sourceCountry"
+                @change="updateCorridor()"
+                class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="US">United States (USD)</option>
+                <option value="GB">United Kingdom (GBP)</option>
+                <option value="EU">Europe (EUR)</option>
+              </select>
+            </div>
+
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">To</label>
+              <select
+                x-model="payment.destCountry"
+                @change="updateCorridor()"
+                class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <template x-for="country in availableDestinations" :key="country.code">
+                  <option :value="country.code" x-text="country.name + ' (' + country.currency + ')'"></option>
+                </template>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Amount (USD)</label>
+              <input
+                type="number"
+                x-model="payment.amount"
+                placeholder="25000"
+                class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+            </div>
+          </div>
+
+          <button
+            @click="fetchQuotes()"
+            :disabled="loading || !payment.amount"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" stroke-dasharray="32" stroke-dashoffset="32"/>
+            </svg>
+            <span x-text="loading ? 'Fetching...' : 'Get Quotes'"></span>
+          </button>
+        </div>
+
+        <!-- Corridor Info -->
+        <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between text-sm">
+          <span class="text-gray-500">
+            Corridor: <span class="font-medium text-gray-900" x-text="corridor"></span>
+          </span>
+          <span class="text-gray-500" x-show="quotes.length > 0">
+            <span x-text="quotes.length"></span> quotes available
+          </span>
+        </div>
+      </div>
+
+      <!-- Quotes Grid -->
+      <template x-if="quotes.length === 0 && !loading">
+        <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-gray-500 mb-2">No quotes loaded</p>
+          <p class="text-sm text-gray-400">Enter payment details and click "Get Quotes" to compare rates</p>
+        </div>
+      </template>
+
+      <template x-if="quotes.length > 0">
+        <div>
+          <!-- Quote Expiry Warning -->
+          <div class="mb-4 flex items-center justify-between">
+            <p class="text-sm text-gray-500">Quotes expire in <span class="font-medium" :class="countdownColor" x-text="formatCountdown(countdown)"></span></p>
+            <button @click="fetchQuotes()" class="text-sm text-primary hover:underline">Refresh Quotes</button>
+          </div>
+
+          <!-- Countdown Bar -->
+          <div class="h-1 bg-gray-200 rounded-full mb-6 overflow-hidden">
+            <div
+              class="countdown-bar h-full rounded-full"
+              :class="countdownColor.replace('text-', 'bg-')"
+              :style="'width: ' + (countdown / 30 * 100) + '%'"
+            ></div>
+          </div>
+
+          <!-- Quote Cards -->
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="(quote, index) in quotes" :key="quote.quoteId">
+              <div
+                class="quote-card bg-white rounded-xl border-2 p-5 cursor-pointer"
+                :class="{
+                  'selected': selectedQuote?.quoteId === quote.quoteId,
+                  'best border-green-500': index === 0
+                }"
+                @click="selectQuote(quote)"
+              >
+                <!-- Best Badge -->
+                <div x-show="index === 0" class="flex items-center gap-1 mb-3">
+                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium animate-pulse-green">
+                    Best Rate
+                  </span>
+                </div>
+
+                <!-- BFI Name -->
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold text-gray-900" x-text="quote.bfiName"></h3>
+                  <span class="text-xs text-gray-500" x-text="quote.paymentMethod"></span>
+                </div>
+
+                <!-- Rate -->
+                <div class="mb-4">
+                  <p class="text-sm text-gray-500">Exchange Rate</p>
+                  <p class="text-2xl font-bold text-gray-900">
+                    <span x-text="quote.rate.toFixed(4)"></span>
+                    <span class="text-sm font-normal text-gray-500" x-text="destCurrency + '/' + sourceCurrency"></span>
+                  </p>
+
+                  <!-- Historical Comparison -->
+                  <div class="flex items-center gap-2 mt-1">
+                    <span
+                      class="text-xs flex items-center gap-1"
+                      :class="quote.historicalComparison.vs24h >= 0 ? 'text-green-600' : 'text-amber-600'"
+                    >
+                      <svg x-show="quote.historicalComparison.vs24h >= 0" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                      </svg>
+                      <svg x-show="quote.historicalComparison.vs24h < 0" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                      </svg>
+                      <span x-text="(quote.historicalComparison.vs24h >= 0 ? '+' : '') + quote.historicalComparison.vs24h.toFixed(1) + '% vs 24h'"></span>
+                    </span>
+                    <span class="text-gray-300">|</span>
+                    <span
+                      class="text-xs"
+                      :class="quote.historicalComparison.vs7d >= 0 ? 'text-green-600' : 'text-amber-600'"
+                      x-text="(quote.historicalComparison.vs7d >= 0 ? '+' : '') + quote.historicalComparison.vs7d.toFixed(1) + '% vs 7d'"
+                    ></span>
+                  </div>
+                </div>
+
+                <!-- Fees -->
+                <div class="border-t border-gray-200 pt-4 mb-4">
+                  <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-500">Network Fee</span>
+                    <span class="text-gray-700" x-text="'$' + (quote.fee * 0.4).toFixed(2)"></span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">BFI Fee</span>
+                    <span class="text-gray-700" x-text="'$' + (quote.fee * 0.6).toFixed(2)"></span>
+                  </div>
+                </div>
+
+                <!-- Beneficiary Receives -->
+                <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                  <p class="text-xs text-gray-500 mb-1">Beneficiary Receives</p>
+                  <p class="text-xl font-bold text-green-600" x-text="formatDestAmount(quote.totalReceived)"></p>
+                </div>
+
+                <!-- Settlement Time -->
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-500">Settlement</span>
+                  <span class="text-gray-700" x-text="'~' + quote.settlementMinutes + ' minutes'"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Selected Quote Actions -->
+          <div x-show="selectedQuote" x-transition class="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-medium text-gray-900">Selected Quote</h3>
+                <p class="text-sm text-gray-500">
+                  <span x-text="selectedQuote?.bfiName"></span> -
+                  Beneficiary receives <span class="font-medium text-green-600" x-text="formatDestAmount(selectedQuote?.totalReceived)"></span>
+                </p>
+              </div>
+              <div class="flex gap-3">
+                <button
+                  @click="selectedQuote = null"
+                  class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <a
+                  :href="'../beneficiary-compliance/index.html?quoteId=' + selectedQuote?.quoteId + '&corridor=' + corridor + '&amount=' + payment.amount"
+                  class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Lock Rate & Continue
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+    </div>
+  </div>
+
+  <script>
+    function rateDeck() {
+      return {
+        isConnected: false,
+        connectionStatus: 'Checking...',
+        loading: false,
+
+        payment: {
+          sourceCountry: 'US',
+          destCountry: 'MX',
+          amount: 25000
+        },
+
+        quotes: [],
+        selectedQuote: null,
+        countdown: 30,
+        countdownInterval: null,
+
+        init() {
+          // Check connection status
+          const config = localStorage.getItem('circleConfig');
+          if (config) {
+            const parsed = JSON.parse(config);
+            this.isConnected = true;
+            this.connectionStatus = parsed.mode === 'live' ? 'Live API' : 'Mock Data';
+          } else {
+            this.connectionStatus = 'Not configured';
+          }
+
+          // Check URL params
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('amount')) {
+            this.payment.amount = parseFloat(params.get('amount'));
+          }
+          if (params.get('country')) {
+            this.payment.destCountry = params.get('country');
+          }
+
+          this.updateCorridor();
+        },
+
+        get availableDestinations() {
+          const destinations = {
+            'US': [
+              { code: 'MX', name: 'Mexico', currency: 'MXN' },
+              { code: 'BR', name: 'Brazil', currency: 'BRL' },
+              { code: 'CO', name: 'Colombia', currency: 'COP' },
+              { code: 'NG', name: 'Nigeria', currency: 'NGN' },
+              { code: 'HK', name: 'Hong Kong', currency: 'HKD' },
+              { code: 'CN', name: 'China', currency: 'CNY' }
+            ],
+            'GB': [
+              { code: 'MX', name: 'Mexico', currency: 'MXN' },
+              { code: 'NG', name: 'Nigeria', currency: 'NGN' },
+              { code: 'IN', name: 'India', currency: 'INR' }
+            ],
+            'EU': [
+              { code: 'MX', name: 'Mexico', currency: 'MXN' },
+              { code: 'BR', name: 'Brazil', currency: 'BRL' }
+            ]
+          };
+          return destinations[this.payment.sourceCountry] || [];
+        },
+
+        get corridor() {
+          return `${this.payment.sourceCountry}-${this.payment.destCountry}`;
+        },
+
+        get sourceCurrency() {
+          const currencies = { 'US': 'USD', 'GB': 'GBP', 'EU': 'EUR' };
+          return currencies[this.payment.sourceCountry] || 'USD';
+        },
+
+        get destCurrency() {
+          const dest = this.availableDestinations.find(d => d.code === this.payment.destCountry);
+          return dest?.currency || 'MXN';
+        },
+
+        get countdownColor() {
+          if (this.countdown > 20) return 'text-green-600';
+          if (this.countdown > 10) return 'text-amber-600';
+          return 'text-red-600';
+        },
+
+        updateCorridor() {
+          // Reset destination if not available
+          const available = this.availableDestinations.map(d => d.code);
+          if (!available.includes(this.payment.destCountry)) {
+            this.payment.destCountry = available[0] || 'MX';
+          }
+          this.quotes = [];
+          this.selectedQuote = null;
+        },
+
+        async fetchQuotes() {
+          this.loading = true;
+          this.quotes = [];
+          this.selectedQuote = null;
+
+          // Clear any existing countdown
+          if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+          }
+
+          // Simulate API delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          // Get quotes from mock data
+          const mockQuotes = MOCK_DATA.quotes[this.corridor] || [];
+          const amount = parseFloat(this.payment.amount) || 25000;
+
+          // Recalculate totals based on amount
+          this.quotes = mockQuotes.map(q => ({
+            ...q,
+            totalReceived: (amount - q.fee) * q.rate
+          })).sort((a, b) => b.totalReceived - a.totalReceived);
+
+          this.loading = false;
+
+          // Start countdown
+          this.countdown = 30;
+          this.countdownInterval = setInterval(() => {
+            this.countdown--;
+            if (this.countdown <= 0) {
+              clearInterval(this.countdownInterval);
+              this.quotes = [];
+              this.selectedQuote = null;
+            }
+          }, 1000);
+        },
+
+        selectQuote(quote) {
+          this.selectedQuote = quote;
+        },
+
+        formatCountdown(seconds) {
+          return `0:${seconds.toString().padStart(2, '0')}`;
+        },
+
+        formatDestAmount(amount) {
+          if (!amount) return '-';
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: this.destCurrency,
+            minimumFractionDigits: 2
+          }).format(amount);
+        }
+      };
+    }
+  </script>
+</body>
+</html>

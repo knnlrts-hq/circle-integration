@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment File Processor | Circle Payment Factory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #0052FF;
+      --color-primary-dark: #0041CC;
+    }
+    .bg-primary { background-color: var(--color-primary); }
+    .text-primary { color: var(--color-primary); }
+    .border-primary { border-color: var(--color-primary); }
+    .hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
+
+    .route-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 500;
+    }
+    .route-cpn { background-color: #DCFCE7; color: #166534; }
+    .route-blockchain { background-color: #E0E7FF; color: #3730A3; }
+    .route-traditional { background-color: #F3F4F6; color: #374151; }
+
+    .drop-zone {
+      border: 2px dashed #D1D5DB;
+      transition: all 0.2s ease;
+    }
+    .drop-zone.dragover {
+      border-color: var(--color-primary);
+      background-color: #EBF5FF;
+    }
+
+    .payment-row {
+      transition: background-color 0.15s ease;
+    }
+    .payment-row:hover {
+      background-color: #F9FAFB;
+    }
+    .payment-row.selected {
+      background-color: #EBF5FF;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <script src="../../shared/mock-data.js"></script>
+  <script src="../../shared/circle-api.js"></script>
+
+  <div x-data="paymentProcessor()" x-init="init()" class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="../../index.html" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </a>
+          <div>
+            <h1 class="text-lg font-semibold text-gray-900">Payment File Processor</h1>
+            <p class="text-sm text-gray-500">Parse and route pain.001.001.03 payment files</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-500" x-text="connectionStatus"></span>
+          <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-green-500' : 'bg-amber-500'"></span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="grid lg:grid-cols-2 gap-6">
+
+        <!-- Left Panel: File Upload -->
+        <div class="space-y-6">
+
+          <!-- Upload Zone -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Upload Payment File</h2>
+
+            <div
+              class="drop-zone rounded-lg p-8 text-center cursor-pointer"
+              :class="{ 'dragover': isDragging }"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop($event)"
+              @click="$refs.fileInput.click()"
+            >
+              <input
+                type="file"
+                x-ref="fileInput"
+                @change="handleFileSelect($event)"
+                accept=".xml"
+                class="hidden"
+              >
+              <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              <p class="text-gray-600 mb-2">Drop your pain.001.001.03 file here</p>
+              <p class="text-sm text-gray-500">or click to browse</p>
+            </div>
+
+            <!-- Sample Files -->
+            <div class="mt-6">
+              <h3 class="text-sm font-medium text-gray-700 mb-3">Or use a sample file:</h3>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  @click="loadSampleFile('mixed')"
+                  class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Mixed Payments (5)
+                </button>
+                <button
+                  @click="loadSampleFile('cpn')"
+                  class="px-3 py-2 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
+                >
+                  CPN Only
+                </button>
+                <button
+                  @click="loadSampleFile('crypto')"
+                  class="px-3 py-2 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors"
+                >
+                  Blockchain
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- File Info -->
+          <div x-show="parsedFile" class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">File Summary</h2>
+            <dl class="grid grid-cols-2 gap-4">
+              <div>
+                <dt class="text-sm text-gray-500">Message ID</dt>
+                <dd class="font-mono text-sm" x-text="parsedFile?.header?.messageId"></dd>
+              </div>
+              <div>
+                <dt class="text-sm text-gray-500">Created</dt>
+                <dd class="text-sm" x-text="formatDate(parsedFile?.header?.creationDateTime)"></dd>
+              </div>
+              <div>
+                <dt class="text-sm text-gray-500">Transactions</dt>
+                <dd class="text-sm font-medium" x-text="parsedFile?.header?.numberOfTransactions"></dd>
+              </div>
+              <div>
+                <dt class="text-sm text-gray-500">Control Sum</dt>
+                <dd class="text-sm font-medium" x-text="formatAmount(parsedFile?.header?.controlSum, 'USD')"></dd>
+              </div>
+            </dl>
+
+            <!-- Route Summary -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+              <h3 class="text-sm font-medium text-gray-700 mb-3">Routing Summary</h3>
+              <div class="flex gap-4">
+                <div class="flex items-center gap-2">
+                  <span class="route-badge route-cpn" x-text="routeSummary.cpn + ' CPN'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="route-badge route-blockchain" x-text="routeSummary.blockchain + ' Blockchain'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="route-badge route-traditional" x-text="routeSummary.traditional + ' Traditional'"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- XML Preview -->
+          <div x-show="xmlContent" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 class="text-lg font-medium text-gray-900">XML Content</h2>
+              <button
+                @click="showXml = !showXml"
+                class="text-sm text-primary hover:underline"
+                x-text="showXml ? 'Hide' : 'Show'"
+              ></button>
+            </div>
+            <div x-show="showXml" class="max-h-64 overflow-auto">
+              <pre class="p-4 text-xs"><code class="language-markup" x-text="xmlContent"></code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Parsed Payments -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Parsed Payments</h2>
+            <p class="text-sm text-gray-500 mt-1">Click a payment to view routing details</p>
+          </div>
+
+          <template x-if="!parsedFile">
+            <div class="p-12 text-center text-gray-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <p>Upload a pain.001 file to see parsed payments</p>
+            </div>
+          </template>
+
+          <template x-if="parsedFile">
+            <div class="divide-y divide-gray-100">
+              <template x-for="payment in parsedFile.payments" :key="payment.id">
+                <div
+                  class="payment-row p-4 cursor-pointer"
+                  :class="{ 'selected': selectedPayment?.id === payment.id }"
+                  @click="selectPayment(payment)"
+                >
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <span class="font-medium text-gray-900" x-text="payment.creditorName"></span>
+                      <span class="ml-2 font-mono text-xs text-gray-500" x-text="payment.endToEndId"></span>
+                    </div>
+                    <span
+                      class="route-badge"
+                      :class="{
+                        'route-cpn': payment.route === 'CPN',
+                        'route-blockchain': payment.route === 'Blockchain',
+                        'route-traditional': payment.route === 'Traditional'
+                      }"
+                      x-text="payment.route"
+                    ></span>
+                  </div>
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-500">
+                      <span x-text="payment.creditorCountry || 'N/A'"></span>
+                      <span class="mx-1">•</span>
+                      <span class="font-mono" x-text="truncateAccount(payment.creditorAccount)"></span>
+                    </span>
+                    <span class="font-medium" x-text="formatAmount(payment.amount, payment.currency)"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+
+      </div>
+
+      <!-- Selected Payment Details -->
+      <div x-show="selectedPayment" x-transition class="mt-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <div class="flex items-start justify-between mb-6">
+            <div>
+              <h2 class="text-lg font-medium text-gray-900">Payment Details</h2>
+              <p class="text-sm text-gray-500 mt-1" x-text="selectedPayment?.endToEndId"></p>
+            </div>
+            <button @click="selectedPayment = null" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <!-- Creditor Info -->
+            <div>
+              <h3 class="text-sm font-medium text-gray-700 mb-3">Creditor</h3>
+              <dl class="space-y-2">
+                <div>
+                  <dt class="text-xs text-gray-500">Name</dt>
+                  <dd class="text-sm" x-text="selectedPayment?.creditorName"></dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-gray-500">Account</dt>
+                  <dd class="text-sm font-mono" x-text="selectedPayment?.creditorAccount"></dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-gray-500">Country</dt>
+                  <dd class="text-sm" x-text="selectedPayment?.creditorCountry || 'N/A'"></dd>
+                </div>
+              </dl>
+            </div>
+
+            <!-- Amount & Route -->
+            <div>
+              <h3 class="text-sm font-medium text-gray-700 mb-3">Payment</h3>
+              <dl class="space-y-2">
+                <div>
+                  <dt class="text-xs text-gray-500">Amount</dt>
+                  <dd class="text-sm font-medium" x-text="formatAmount(selectedPayment?.amount, selectedPayment?.currency)"></dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-gray-500">Remittance Info</dt>
+                  <dd class="text-sm" x-text="selectedPayment?.remittanceInfo || 'N/A'"></dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          <!-- Routing Decision -->
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <h3 class="text-sm font-medium text-gray-700 mb-3">Routing Decision</h3>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-3 mb-2">
+                <span
+                  class="route-badge"
+                  :class="{
+                    'route-cpn': selectedPayment?.route === 'CPN',
+                    'route-blockchain': selectedPayment?.route === 'Blockchain',
+                    'route-traditional': selectedPayment?.route === 'Traditional'
+                  }"
+                  x-text="selectedPayment?.route"
+                ></span>
+                <span class="text-sm font-medium" x-text="getRouteLabel(selectedPayment?.route)"></span>
+              </div>
+              <p class="text-sm text-gray-600" x-text="selectedPayment?.routeReason"></p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-4 flex gap-3">
+              <template x-if="selectedPayment?.route === 'CPN'">
+                <a
+                  :href="'../cross-border-rate-desk/index.html?amount=' + selectedPayment?.amount + '&country=' + selectedPayment?.creditorCountry"
+                  class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+                >
+                  Get CPN Quotes
+                </a>
+              </template>
+              <template x-if="selectedPayment?.route === 'Blockchain'">
+                <a
+                  :href="'../blockchain-payment-desk/index.html?address=' + selectedPayment?.creditorAccount + '&amount=' + selectedPayment?.amount"
+                  class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                >
+                  Process Blockchain Transfer
+                </a>
+              </template>
+              <template x-if="selectedPayment?.route === 'Traditional'">
+                <button class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
+                  Route to SWIFT/SEPA
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function paymentProcessor() {
+      return {
+        isDragging: false,
+        xmlContent: null,
+        parsedFile: null,
+        selectedPayment: null,
+        showXml: false,
+        isConnected: false,
+        connectionStatus: 'Checking...',
+
+        init() {
+          // Check connection status
+          const config = localStorage.getItem('circleConfig');
+          if (config) {
+            const parsed = JSON.parse(config);
+            this.isConnected = true;
+            this.connectionStatus = parsed.mode === 'live' ? 'Live API' : 'Mock Data';
+          } else {
+            this.connectionStatus = 'Not configured';
+          }
+        },
+
+        get routeSummary() {
+          if (!this.parsedFile) return { cpn: 0, blockchain: 0, traditional: 0 };
+          const payments = this.parsedFile.payments;
+          return {
+            cpn: payments.filter(p => p.route === 'CPN').length,
+            blockchain: payments.filter(p => p.route === 'Blockchain').length,
+            traditional: payments.filter(p => p.route === 'Traditional').length
+          };
+        },
+
+        handleFileDrop(event) {
+          this.isDragging = false;
+          const file = event.dataTransfer.files[0];
+          if (file) this.processFile(file);
+        },
+
+        handleFileSelect(event) {
+          const file = event.target.files[0];
+          if (file) this.processFile(file);
+        },
+
+        processFile(file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.xmlContent = e.target.result;
+            this.parseXml();
+          };
+          reader.readAsText(file);
+        },
+
+        async loadSampleFile(type) {
+          const files = {
+            'mixed': '../../shared/samples/pain001-mixed.xml',
+            'cpn': '../../shared/samples/pain001-cpn-only.xml',
+            'crypto': '../../shared/samples/pain001-crypto.xml'
+          };
+
+          try {
+            const response = await fetch(files[type]);
+            if (response.ok) {
+              this.xmlContent = await response.text();
+              this.parseXml();
+            } else {
+              // Fall back to mock data
+              this.useMockData();
+            }
+          } catch (error) {
+            this.useMockData();
+          }
+        },
+
+        useMockData() {
+          // Use embedded mock data when files aren't available
+          this.parsedFile = {
+            header: {
+              messageId: 'MSG-2026011601',
+              creationDateTime: '2026-01-16T10:30:00Z',
+              numberOfTransactions: 5,
+              controlSum: 130000.00
+            },
+            payments: MOCK_DATA.parsedPayments
+          };
+          this.xmlContent = '<!-- Mock data loaded -->';
+        },
+
+        parseXml() {
+          try {
+            this.parsedFile = Pain001Parser.parse(this.xmlContent);
+            this.selectedPayment = null;
+
+            // Re-highlight code
+            this.$nextTick(() => {
+              Prism.highlightAll();
+            });
+          } catch (error) {
+            console.error('Parse error:', error);
+            alert('Failed to parse XML: ' + error.message);
+          }
+        },
+
+        selectPayment(payment) {
+          this.selectedPayment = payment;
+        },
+
+        formatAmount(amount, currency) {
+          if (!amount) return '-';
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency || 'USD'
+          }).format(amount);
+        },
+
+        formatDate(dateStr) {
+          if (!dateStr) return '-';
+          return new Date(dateStr).toLocaleString();
+        },
+
+        truncateAccount(account) {
+          if (!account) return '-';
+          if (account.length > 20) {
+            return account.substring(0, 8) + '...' + account.substring(account.length - 6);
+          }
+          return account;
+        },
+
+        getRouteLabel(route) {
+          const labels = {
+            'CPN': 'Circle Payments Network',
+            'Blockchain': 'Direct Blockchain Transfer',
+            'Traditional': 'Traditional Banking Rails'
+          };
+          return labels[route] || route;
+        }
+      };
+    }
+  </script>
+</body>
+</html>

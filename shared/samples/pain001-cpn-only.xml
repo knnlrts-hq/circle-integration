@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MSG-2026012001-CPN</MsgId>
+      <CreDtTm>2026-01-20T09:15:00Z</CreDtTm>
+      <NbOfTxs>3</NbOfTxs>
+      <CtrlSum>72500.00</CtrlSum>
+      <InitgPty>
+        <Nm>Acme Corporation</Nm>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>12-3456789</Id>
+              <SchmeNm>
+                <Cd>TXID</Cd>
+              </SchmeNm>
+            </Othr>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMTINF-CPN-001</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
+      <NbOfTxs>3</NbOfTxs>
+      <CtrlSum>72500.00</CtrlSum>
+      <ReqdExctnDt>2026-01-21</ReqdExctnDt>
+      <Dbtr>
+        <Nm>Acme Corporation</Nm>
+        <PstlAdr>
+          <StrtNm>123 Financial District</StrtNm>
+          <PstCd>10004</PstCd>
+          <TwnNm>New York</TwnNm>
+          <Ctry>US</Ctry>
+        </PstlAdr>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>US12345678901234567890</IBAN>
+        </Id>
+        <Ccy>USD</Ccy>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>CHASUS33XXX</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+
+      <!-- Payment 1: Mexico - CPN Eligible via CLABE -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CPN-2026012001</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">25000.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>BABORSMXMID</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Manufactura Industrial MX SA de CV</Nm>
+          <PstlAdr>
+            <StrtNm>Av. Reforma 505</StrtNm>
+            <PstCd>06600</PstCd>
+            <TwnNm>Ciudad de Mexico</TwnNm>
+            <Ctry>MX</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>032180000118359719</Id>
+              <SchmeNm>
+                <Cd>CLABE</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Invoice INV-2026-0201 - Manufacturing Services Q1</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 2: Brazil - CPN Eligible -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CPN-2026012002</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">32500.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>BRAABORJXXX</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Tech Solutions Brasil Ltda</Nm>
+          <PstlAdr>
+            <StrtNm>Av. Paulista 1578</StrtNm>
+            <PstCd>01310-200</PstCd>
+            <TwnNm>Sao Paulo</TwnNm>
+            <Ctry>BR</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>341987654321</Id>
+              <SchmeNm>
+                <Cd>BRAC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>PO-2026-0156 - Software Development Services</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 3: Colombia - CPN Eligible -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CPN-2026012003</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USD">15000.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>COABORGTXXX</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Consultores Andinos SAS</Nm>
+          <PstlAdr>
+            <StrtNm>Carrera 7 No. 71-21</StrtNm>
+            <PstCd>110231</PstCd>
+            <TwnNm>Bogota</TwnNm>
+            <Ctry>CO</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>00712345678901</Id>
+              <SchmeNm>
+                <Cd>BBAN</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Contract CON-2026-0034 - Consulting Services</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

@@ -455,6 +455,14 @@
 
         formatAmount(amount, currency) {
           if (!amount) return '-';
+          // Handle stablecoin/crypto currencies that aren't standard ISO codes
+          const cryptoCurrencies = ['USDC', 'USDT', 'EURC', 'DAI'];
+          if (cryptoCurrencies.includes(currency)) {
+            return new Intl.NumberFormat('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            }).format(amount) + ' ' + currency;
+          }
           return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: currency || 'USD'

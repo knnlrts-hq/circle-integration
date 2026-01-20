@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MSG-2026012001-CRYPTO</MsgId>
+      <CreDtTm>2026-01-20T11:45:00Z</CreDtTm>
+      <NbOfTxs>4</NbOfTxs>
+      <CtrlSum>95000.00</CtrlSum>
+      <InitgPty>
+        <Nm>Acme Corporation</Nm>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>12-3456789</Id>
+              <SchmeNm>
+                <Cd>TXID</Cd>
+              </SchmeNm>
+            </Othr>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMTINF-CRYPTO-001</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
+      <NbOfTxs>4</NbOfTxs>
+      <CtrlSum>95000.00</CtrlSum>
+      <ReqdExctnDt>2026-01-21</ReqdExctnDt>
+      <Dbtr>
+        <Nm>Acme Corporation</Nm>
+        <PstlAdr>
+          <StrtNm>123 Financial District</StrtNm>
+          <PstCd>10004</PstCd>
+          <TwnNm>New York</TwnNm>
+          <Ctry>US</Ctry>
+        </PstlAdr>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>US12345678901234567890</IBAN>
+        </Id>
+        <Ccy>USD</Ccy>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>CHASUS33XXX</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+
+      <!-- Payment 1: EVM Wallet - Smart Contract Development -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CRYPTO-2026012001</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USDC">25000.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>ChainDev Labs Inc</Nm>
+          <PstlAdr>
+            <Ctry>SG</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>0x1a2B3c4D5e6F7890AbCdEf1234567890aBcDeF12</Id>
+              <SchmeNm>
+                <Cd>BLKC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Smart Contract Audit - Project Alpha Phase 2</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 2: Solana Wallet - DeFi Protocol Integration -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CRYPTO-2026012002</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USDC">18500.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>SolanaFi Technologies</Nm>
+          <PstlAdr>
+            <Ctry>CH</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU</Id>
+              <SchmeNm>
+                <Cd>BLKC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>DeFi Integration Services - Milestone 4</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 3: EVM Wallet - NFT Platform Development -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CRYPTO-2026012003</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USDC">42000.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>Web3 Ventures Ltd</Nm>
+          <PstlAdr>
+            <Ctry>AE</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>0xaBcD1234567890EfAb1234567890AbCdEf567890</Id>
+              <SchmeNm>
+                <Cd>BLKC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>NFT Marketplace Development - Final Payment</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+
+      <!-- Payment 4: Solana Wallet - Protocol Treasury -->
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-CRYPTO-2026012004</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="USDC">9500.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>DAO Protocol Foundation</Nm>
+          <PstlAdr>
+            <Ctry>KY</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK</Id>
+              <SchmeNm>
+                <Cd>BLKC</Cd>
+              </SchmeNm>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Governance Token Distribution - Q1 2026</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

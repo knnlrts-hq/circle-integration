@@ -241,7 +241,7 @@ const MOCK_DATA = {
       id: 'PMT-003',
       endToEndId: 'E2E-2026011603',
       creditorName: 'DeFi Protocol Ltd',
-      creditorAccount: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      creditorAccount: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEba',
       creditorCountry: null,
       amount: 10000.00,
       currency: 'USDC',

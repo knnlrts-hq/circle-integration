@@ -262,7 +262,7 @@ class CircleAPIClient:
 ```
 1. Corporate User Action:
    - Submits payment in Trax portal
-   - Beneficiary: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb (blockchain address)
+   - Beneficiary: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEba (blockchain address)
    - Amount: 10,000 USDC
 
 2. Trax Processing:
